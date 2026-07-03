@@ -33,7 +33,6 @@ DEFINE CLASS dynobj AS Custom
 	    ENDIF
         LOCAL lcJSON,loJSON
         loJSON = THIS.getObject()
-        SET STEP ON 
         lcJSON = JSON.Stringify(loJSON)
         IF JSON.lastError.hasError
            THROW JSON.lastError.Message
