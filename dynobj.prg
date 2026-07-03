@@ -28,9 +28,16 @@ DEFINE CLASS dynobj AS Custom
 
 	PROCEDURE ToString
 	    IF TYPE("JSON.Name") <> "C"
+            THROW "No existe el objeto JSON"
 	    	RETURN ""
 	    ENDIF
-		RETURN JSON.Stringify(THIS._Object)		
+        LOCAL lcJSON
+        lcJSON = JSON.Stringify(THIS._Object)	
+        IF JSON.lastError.hasError
+           THROW JSON.lastError.Message
+           RETURN ""
+        ENDIF
+		RETURN lcJSON
 		
 	PROCEDURE getObject
 		RETURN THIS._Object
