@@ -16,7 +16,7 @@ DEFINE CLASS dynobj AS Custom
 	PROCEDURE THIS_Access(pcPropName)
 	    pcPropName = LOWER(pcPropName)
 	    DO CASE 	    			    
-	        CASE TYPE("THIS._Object") = "L" OR INLIST(pcPropName,"_object","tostring","getobject","clone") 
+	        CASE TYPE("THIS._Object") = "L" OR INLIST(pcPropName,"_object","tostring","getobject","clone","_flat") 
 	    		RETURN THIS
 	    			
 	    	OTHERWISE
@@ -31,16 +31,29 @@ DEFINE CLASS dynobj AS Custom
             THROW "No existe el objeto JSON"
 	    	RETURN ""
 	    ENDIF
-        LOCAL lcJSON
-        lcJSON = JSON.Stringify(THIS._Object)	
+        LOCAL lcJSON,loJSON
+        loJSON = THIS.getObject()
+        SET STEP ON 
+        lcJSON = JSON.Stringify(loJSON)
         IF JSON.lastError.hasError
            THROW JSON.lastError.Message
            RETURN ""
         ENDIF
 		RETURN lcJSON
 		
+		
 	PROCEDURE getObject
-		RETURN THIS._Object
+	    LOCAL oCopy,aPropCount,nProp,cProp,uValue
+	    LOCAL ARRAY aProps[1]
+	    oCopy = CREATEOBJECT("Empty")
+	    nPropCount = AMEMBERS(aProps, THIS._object, 0)
+	    FOR nProp = 1 TO nPropCount
+	        cProp = aProps[nProp]
+	        uValue = THIS._flat( GETPEM(THIS._Object, cProp) )
+	        ADDPROPERTY(oCopy, cProp, uValue)
+	    ENDFOR	
+		RETURN oCopy
+		
 
 	PROCEDURE Clone(plGetObject)
 		LOCAL oClon,cProp,nProp,nProps
@@ -52,4 +65,27 @@ DEFINE CLASS dynobj AS Custom
 			STORE GETPEM(THIS._Object, cProp) TO ("oClon." + cProp)
 		ENDFOR
 		RETURN IIF(plGetObject,oClon.getObject(),oClon)
+		
+	HIDDEN FUNCTION _flat(puValue)
+		LOCAL oFlat
+		DO CASE 
+		   CASE VARTYPE(puValue) <> "O"
+			    oFlat = puValue
+		
+	       CASE PEMSTATUS(puValue, "count", 5)
+		    	LOCAL oItem, uValue
+		    	oFlat = CREATEOBJECT("Collection")
+		    	FOR EACH oItem IN puValue FOXOBJECT
+		    	    uValue = THIS._flat(oItem)
+		    		oFlat.Add(uValue)
+		    	ENDFOR
+		    	
+	       CASE PEMSTATUS(puValue, "getObject", 5)
+	        	oFlat = puValue.getObject()
+	    
+	       OTHERWISE
+	            oFlat = puValue
+	    ENDCASE
+	    RETURN oFlat
+
 ENDDEFINE
